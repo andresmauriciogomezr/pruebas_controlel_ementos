@@ -32,6 +32,7 @@ class Guarda(unittest.TestCase):
         else :
             self.driver = webdriver.Ie('C:\IEDriverServer\IEDriverServer.exe')
         
+        self.driver.maximize_window()
         self.username = "guardacanteraeltriunfo@argos.com"
         self.password = "guardacanteraeltriunfo@argos.com"
 
@@ -103,12 +104,12 @@ class Guarda(unittest.TestCase):
                 observationsInput.send_keys(observations)
 
                 # Presiona el botón confirmar para el elemento
-                confirmElementButton = row.find_element_by_css_selector('button.confirm-button')
+                #confirmElementButton = row.find_element_by_css_selector('button.confirm-button')
+                confirmElementButton = WebDriverWait(row, 10).until(EC.element_to_be_clickable((By.CSS_SELECTOR, 'button.confirm-button')))
                 confirmElementButton.click()
 
                 # Agrega el elemento confirmado
                 confirmedElements.append(next(item for item in self.requestData['elements'] if item["description"] == description))
-
 
         nextPageButton = driver.find_element_by_css_selector('a#confirm-element-table_next')
         if self.utilities.has_class(nextPageButton, 'disabled') == False: # Se puede presionar
@@ -129,6 +130,37 @@ class Guarda(unittest.TestCase):
 
         # Confirma los elementos
         confirmedElements = self.confirm_elemants()
+    
+        # confirma la solicitud
+        confirmRequestButton = driver.find_element_by_css_selector('button#request-confirm-button')
+        confirmRequestButton.click()
+
+        print("Solicitud " +self.requestData['requestId']+ " confirmada con " +str(len(confirmedElements))+ " elementos confirmados")
+        if len(confirmedElements) < len(self.requestData['elements']):# La contidad de elementos confirmados es menor a la cantidad real de elementos
+            # Hace clic en el botón confirma de la ventana emergente p
+            WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, 'button#confirm-ingress-modal-button'))).click()
+
+
+        # Actualiza los elementos de la solicitud con lo que fueron confirmados
+        self.requestData['elements'] = confirmedElements
+
+        driver.quit();
+
+        return self.requestData
+
+
+    def approve_departure_request(self, linkTo):
+        driver = self.driver
+
+        self.utilities.login(self.driver, self.base_url, self.username, self.password)
+        self.link_to_pending_requests(linkTo)
+        self.find_request()
+
+        # Hace las comparaciones necesarias
+        self.assert_request()
+
+        # Confirma los elementos
+        confirmedElements = self.confirm_elemants([])
     
         # confirma la solicitud
         confirmRequestButton = driver.find_element_by_css_selector('button#request-confirm-button')

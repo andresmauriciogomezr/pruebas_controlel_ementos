@@ -53,6 +53,7 @@ class IngressRequest(unittest.TestCase):
             self.driver = webdriver.Firefox()
         else :
             self.driver = webdriver.Ie('C:\IEDriverServer\IEDriverServer.exe')
+        self.driver.maximize_window()
         
         self.username = "saludocupacional@agrepuestos.com"
         self.password = "saludocupacional@agrepuestos.com"
@@ -76,6 +77,14 @@ class IngressRequest(unittest.TestCase):
             "Sierras Hidraulicas",
             "Vibroapisonadores",
             "Amoladora",
+            "Picos",
+            "Mazos",
+            "Cuñas",
+            "Paletas",
+            "Alicates",
+            "Desatornilladores",
+            "Plomada",
+            "Sierras",
         ]
 
         self.equipo = [
@@ -420,6 +429,7 @@ class DepartureRequest(unittest.TestCase):
             self.driver = webdriver.Firefox()
         else :
             self.driver = webdriver.Ie('C:\IEDriverServer\IEDriverServer.exe')
+        self.driver.maximize_window()
         
         self.username = "saludocupacional@agrepuestos.com"
         self.password = "saludocupacional@agrepuestos.com"
@@ -429,7 +439,6 @@ class DepartureRequest(unittest.TestCase):
         self.requestData = ingressRequestData
 
         print("********************* Tercero ************************************")
-
 
     def link_to_new_request(self, linkTo):
         driver = self.driver
@@ -497,9 +506,45 @@ class DepartureRequest(unittest.TestCase):
 
         driver.find_element_by_css_selector('button#addElementsButton').click() 
 
-    def create_element_departure_request(self):
+    def select_some_elements(self, relatedElements = []):
         driver = self.driver
 
+        # Selecciona un tipo de elemento aleatoriamente
+        table = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, 'table#intvory-table')))
+        elements  = table.find_elements_by_css_selector('tbody tr')
+        
+        for row in elements:
+            amountInput = row.find_element_by_css_selector('input.newAmount')
+            amount = amountInput.get_attribute('value')
+            description = row.find_elements_by_css_selector('td')[2].get_attribute('innerHTML').strip()
+
+            # Saca aleatoríamente un porcentaje de la cantidad entre 10 y 100 para obtener una cantidad a salir
+            newAmountPercent = random.randrange(10, 100, 10) / 100
+            newAmount = round( (int(int(amount) * newAmountPercent)))
+            if newAmount < 1: # Minimo uno
+                newAmount = 1
+            newAmount = str(newAmount)
+    
+            amountInput.clear()
+            amountInput.send_keys(newAmount)
+
+            checkbox = row.find_element_by_css_selector('input[type="checkbox"]')
+            checkbox.click()
+
+            # Agrega el elemento confirmado
+            relatedElements.append(next(item for item in self.requestData['elements'] if item["description"] == description))
+
+        nextPageButton = driver.find_element_by_css_selector('a#intvory-table_next')
+        if self.utilities.has_class(nextPageButton, 'disabled') == False: # Se puede presionar
+            nextPageButton.click()
+            return self.select_all_elements(relatedElements)
+
+        else:
+            driver.find_element_by_css_selector('button#addElementsButton').click()
+            return relatedElements
+    
+    def create_element_departure_request(self):
+        driver = self.driver
 
         self.utilities.login(self.driver, self.base_url, self.username, self.password)
         self.link_to_new_request('Salida de Elementos')
@@ -507,10 +552,17 @@ class DepartureRequest(unittest.TestCase):
 
         self.assert_request() # Verifica que los elementos y las cantidades coincidan con lo aprobado pro el guarda al entrar
         
-        self.select_all_elements()
+        #self.select_all_elements()
+        relatedElements = self.select_some_elements()
 
         driver.find_element(By.CSS_SELECTOR, 'div.submit-request-button').find_element_by_css_selector('input').click()
+        print("Solicitud " +str(self.requestData['requestId'])+ " creada con "+ str(len(relatedElements)))
+
+        self.requestData['ElementsIngressed'] = self.requestData['elements']
+        self.requestData['elements'] = relatedElements
         driver.quit();
+        
+        return self.requestData
 
     def modify_element_departure_request(self):
         driver = self.driver
@@ -645,7 +697,6 @@ class DepartureRequest(unittest.TestCase):
         # Hace las comparaciones con los elementos resultantes y los elementos guardados al momento de crear la solicitud
         self.assert_elements()
 
-
     def assert_elements(self, checkedElementsAmount = 0):
         driver = self.driver
         elements = self.requestData['elements']
@@ -675,10 +726,9 @@ class DepartureRequest(unittest.TestCase):
             nextPageButton.click()
             self.assert_elements(checkedElementsAmount)
         else: # Ya no hay más paginas disponibles
+            self.utilities.return_table_to_firstpage(driver, "intvory-table")
             assert checkedElementsAmount == len(elements) # Compara la cantidad de elementos en la tabla con los guardados
             print("Comparados datos de elementos...")
-
-
 
 class ArgosDepartureRequest(unittest.TestCase):
 

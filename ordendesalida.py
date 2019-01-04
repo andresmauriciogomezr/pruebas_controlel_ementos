@@ -28,7 +28,8 @@ class EntradaSalidaElementos(unittest.TestCase):
     def setUp(self, browser = "crhome"):
 
         self.browser = browser
-        self.base_url = "http://179.32.43.198/ControlElementos/"
+        #self.base_url = "http://179.32.43.198/ControlElementos/"
+        self.base_url = "http://179.32.43.198/IngresosOnline/"
 
     
     def test_flujo_salida_activos_argos(self):

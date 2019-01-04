@@ -27,16 +27,16 @@ class Utilities(unittest.TestCase):
         TercerosButton = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, 'btnUserTercero')))
         TercerosButton.click()
 
-        emailInput = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, 'input#Email')))
+        emailInput = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, '//section[@id="loginFormTercero"]/form//input[@id="Email"]')))
         emailInput.clear()
         emailInput.send_keys(username)
         
-        passwordInput = driver.find_element_by_css_selector("input#Password")
+        passwordInput = driver.find_element_by_xpath('//section[@id="loginFormTercero"]/form//input[@id="Password"]')
         passwordInput.clear()
         passwordInput.send_keys(password)
         
         # El Botón de inicio de sesión
-        driver.find_element_by_css_selector("input.btn-primary").click()
+        driver.find_element_by_xpath('//section[@id="loginFormTercero"]/form//input[@type="submit"]').click()
 
     def find_request(self, driver, tableCssSelector, requestId, nextButtonCssSelector, columnToSearch):
         driver = driver

@@ -62,10 +62,10 @@ class EntradaSalidaElementos(unittest.TestCase):
         requestData = guardaDriver.approve_request('Solicitudes de Terceros')
 
         terceroDriver = tercero.DepartureRequest(self.base_url, self.browser, requestData)
-        terceroDriver.create_element_departure_request()
-        return
+        requestData = terceroDriver.create_element_departure_request()
+
         guardaDriver = guarda.Guarda(self.base_url, self.browser, requestData)
-        guardaDriver.approve_request('Solicitudes de Terceros')
+        guardaDriver.approve_departure_request('Solicitudes de Terceros')
 
     def ttest_editar_salida_elementos(self):
 
