@@ -744,11 +744,13 @@ class ArgosDepartureRequest(unittest.TestCase):
             self.driver = webdriver.Firefox()
         else :
             self.driver = webdriver.Ie('C:\IEDriverServer\IEDriverServer.exe')
+        self.driver.maximize_window()
         
-        self.username = "saludocupacional@agrepuestos.com"
-        self.password = "saludocupacional@agrepuestos.com"
+        self.username = "pruebagomez@fortoxsa.com"
+        self.password = "Ingresos1*"
 
         self.plantName = "CANTERA EL TRIUNFO"
+        self.zonaFrancaPlant = "PLANTA CEMENTOS CARTAGENA ZFA"
 
         self.interventorName = 'Andrés Mauricio Gómez'
 
@@ -775,6 +777,7 @@ class ArgosDepartureRequest(unittest.TestCase):
             'elements' : [], 
         }
 
+        print("********************* Tercero ************************************")
         #time.sleep(5)
 
     def link_to_new_request(self, linkTo):
@@ -795,6 +798,7 @@ class ArgosDepartureRequest(unittest.TestCase):
 
     def fill_data_request(self):
         driver = self.driver
+        self.requestData['requestType'] = "Salida Activos de Argos"
 
         # Hace foco en el input para el trabajador
         dataListInput = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, 'input#trabajadorInput')))
@@ -807,6 +811,7 @@ class ArgosDepartureRequest(unittest.TestCase):
         # selectiona aleatoriamente una de la opciones y consigue el texto
         randomIndex = random.randrange(1,len(options))
         optionText = options[randomIndex].get_attribute("value")
+        self.requestData['responsable'] = optionText
 
         # Ingresa el texto en el input para seleccionar el trabajador
         dataListInput.clear()
@@ -817,28 +822,40 @@ class ArgosDepartureRequest(unittest.TestCase):
         select = Select(dataListInput)
         randomIndex = random.randrange(1,len(select.options))
         select.select_by_index(randomIndex)
+        self.requestData['departureReasson'] = select.first_selected_option.text
 
         #Ingresa un destino
         destinyInput = driver.find_element_by_css_selector('input#destination-form')
         destinyInput.clear()
         destinyInput.send_keys('Destino de prueba')
+        self.requestData['destiny'] = 'Destino de prueba'
 
         # Selecciona una planta aleatoriamente
         dataListInput = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, 'select#plantaId-form')))
         select = Select(dataListInput)
-        randomIndex = random.randrange(1,len(select.options))
-        select.select_by_visible_text(self.plantName)
+        isZonaFranca = random.randrange(0,2) # Random entre 0 y 1 para definir si es zona franca
+        if(isZonaFranca == 1):
+            select.select_by_visible_text(self.zonaFrancaPlant)
+            self.requestData["isZonaFranca"] = True
+            self.requestData['plant'] = self.zonaFrancaPlant
+        else:
+            select.select_by_visible_text(self.plantName)
+            self.requestData['plant'] = self.plantName
+            self.requestData["isZonaFranca"] = False
+
 
         # Selecciona una categoría de elemento
         dataListInput = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, 'select#elementCategory-form')))
         select = Select(dataListInput)
         randomIndex = random.randrange(1,len(select.options))
         select.select_by_index(randomIndex)
+        self.requestData['elementCategory'] = select.first_selected_option.text
 
         # Selecciona una categoría de elemento
         dataListInput = WebDriverWait(driver, 10).until(selector_got_options((By.CSS_SELECTOR, 'select#interventor-combobox'), 1))
         select = Select(dataListInput)
         select.select_by_visible_text(self.interventorName)
+        self.requestData['interventor'] = self.interventorName
 
         returnCheckbox = driver.find_element_by_css_selector('input#returnDate-checkbox')
         returnCheckbox.click()
@@ -846,6 +863,7 @@ class ArgosDepartureRequest(unittest.TestCase):
         returnInput.clear()
         #returnInput.send_keys('28/12/2018')
         self.utilities.selectDate(driver, returnInput, "28")
+        self.requestData['returnDate'] = '28/01/2019'
 
         # Clic en el botón continuar
         continueButton = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, 'input.btn-success')))
@@ -856,8 +874,7 @@ class ArgosDepartureRequest(unittest.TestCase):
 
         elementDescription = self.herramientas[random.randrange(0,len(self.herramientas) - 1)]
 
-        if elementDescription not in self.requestData['elements']: # Para no ingresar elementos repetidos
-            self.requestData['elements'].append(elementDescription)
+        if not any(d['description'] == elementDescription for d in self.requestData['elements']): # Para no ingresar elementos repetidos
 
             descriptionInput = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, 'textarea#form_element-description')))
             descriptionInput.clear()
@@ -881,11 +898,18 @@ class ArgosDepartureRequest(unittest.TestCase):
             addElementButton = driver.find_element_by_css_selector("form#elment-form").find_element_by_css_selector("input.btn-primary")
             addElementButton.click()
 
+            self.requestData['elements'].append({
+                'description' : elementDescription,
+                'amount' : amount,
+                'serial' : serial,
+                'status' : 'en Espera Aprobación'
+                })
+
     def create_departure_request(self):
         driver = self.driver
 
         self.utilities.login(self.driver, self.base_url, self.username, self.password)
-        self.link_to_new_request('Salida Activos de Argos')
+        self.link_to_new_request('Salida de Activos Argos')
         self.fill_data_request()
 
         elementAmount = random.randrange(1,30)
@@ -912,6 +936,8 @@ class ArgosDepartureRequest(unittest.TestCase):
         consecutive = consecutive.get_attribute('innerHTML')
 
         self.requestData['requestId'] = consecutive.strip()
+
+        print("Solicitud " + consecutive +" creada con " + str(len(self.requestData["elements"])) + " elementos")
 
         driver.quit();
 

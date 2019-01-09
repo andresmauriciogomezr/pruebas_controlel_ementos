@@ -14,6 +14,7 @@ import string
 import guarda
 import tercero
 import interventor
+import usuariooperador
 
 
 import random
@@ -24,10 +25,11 @@ import pprint
 
 class EntradaSalidaElementos(unittest.TestCase):
 
-    def setUp(self, browser = "firefox"):
+    def setUp(self, browser = "crhome"):
 
         self.browser = browser
-        self.base_url = "http://179.32.43.198/ControlElementos/"
+        #self.base_url = "http://179.32.43.198/ControlElementos/"
+        self.base_url = "http://179.32.43.198/IngresosOnline"
 
     
     def test_flujo_salida_activos_argos(self):
@@ -36,13 +38,19 @@ class EntradaSalidaElementos(unittest.TestCase):
         requestData = terceroDriver.create_departure_request()
 
         inverventorDriver = interventor.Interventor(self.base_url, self.browser, requestData)
-        inverventorDriver.approve_request('Solicitudes Terceros')
+        requestData = inverventorDriver.approve_request('Solicitudes Terceros')
 
+        if requestData["isZonaFranca"] == 1:
+            usuarioOperador = usuariooperador.UsuarioOperador(self.base_url, self.browser, requestData)
+            usuarioOperador.approve_request('Solicitudes Pendientes')
+
+        # requestData = {'requestId' : "153", "isZonaFranca" : True}
         guardaDriver = guarda.Guarda(self.base_url, self.browser, requestData)
         guardaDriver.approve_request('Solicitudes de Terceros')
 
         guardaDriver = guarda.Guarda(self.base_url, self.browser, requestData)
         guardaDriver.approve_request('Solicitudes de Terceros')
+
 
         time.sleep(5)
 

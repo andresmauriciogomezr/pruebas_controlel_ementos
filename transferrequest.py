@@ -15,6 +15,7 @@ import guarda
 import tercero
 import interventor
 import usuarioargos
+import usuariooperador
 
 
 import random
@@ -28,7 +29,8 @@ class EntradaSalidaElementos(unittest.TestCase):
     def setUp(self, browser = "crhome"):
 
         self.browser = browser
-        self.base_url = "http://179.32.43.198/ControlElementos/"
+        #self.base_url = "http://179.32.43.198/ControlElementos/"
+        self.base_url = "http://179.32.43.198/IngresosOnline/"
 
     
     def test_flujo_transfer_request_argos(self):
@@ -37,10 +39,18 @@ class EntradaSalidaElementos(unittest.TestCase):
         requestData = usuarioargosDriver.create_transfer_request()
 
         inverventorDriver = interventor.Interventor(self.base_url, self.browser, requestData)
-        inverventorDriver.approve_request('Solicitudes Argos')
+        requestData = inverventorDriver.approve_request('Solicitudes Argos')
+
+        if requestData["isZonaFranca"] == 1:
+            usuarioOperador = usuariooperador.UsuarioOperador(self.base_url, self.browser, requestData)
+            usuarioOperador.approve_request('Solicitudes Pendientes')
+
 
         guardaDriver = guarda.Guarda(self.base_url, self.browser, requestData)
-        guardaDriver.approve_request('Solicitudes Argos')
+        requestData = guardaDriver.approve_argos_request('Solicitudes Argos')
+
+        guardaDriver = guarda.Guarda(self.base_url, self.browser, requestData)
+        guardaDriver.approve_argos_request('Solicitudes Argos')
 
         time.sleep(5)
 

@@ -19,7 +19,7 @@ import os
 import pprint
 
 
-class Interventor(unittest.TestCase):
+class UsuarioOperador(unittest.TestCase):
 
     def __init__(self, base_url, browser, requestData):    
         
@@ -35,7 +35,7 @@ class Interventor(unittest.TestCase):
             self.driver = webdriver.Ie('C:\IEDriverServer\IEDriverServer.exe')
         self.driver.maximize_window()
         
-        self.username = "agomezr@argos.com.co"
+        self.username = "usuariooperador@argos.com"
         self.password = "Ingresos1*"
 
         self.requestData = requestData
@@ -43,7 +43,7 @@ class Interventor(unittest.TestCase):
         #time.sleep(5)
         self.utilities = utilities.Utilities()
 
-        print("********************* Interventor ************************************")
+        print("********************* Usuario Operador ************************************")
 
     def link_to_pending_requests(self, linkTo):
         driver = self.driver
@@ -52,13 +52,7 @@ class Interventor(unittest.TestCase):
         menu = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.LINK_TEXT, 'Ingreso Elementos')))
         menu.click() 
 
-        # Espera hasta que el link esté presente y hace clic
-        link = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.LINK_TEXT, linkTo)))
-        mouse = ActionChains(driver)
-        mouse.move_to_element(link)
-        mouse.perform()
-
-        link = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.PARTIAL_LINK_TEXT , 'Solicitudes Pendientes')))
+        link = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.PARTIAL_LINK_TEXT , linkTo)))
         link.click()
 
     def find_request(self):
@@ -102,20 +96,21 @@ class Interventor(unittest.TestCase):
             checkbox = row.find_element_by_css_selector('input.checkbox')
             self.utilities.scrollToElement(driver, checkbox)
             checkbox.click()
-
+            
             # Busca el elemento y le cambia el estado, luego lo actualiza
             description = columns[2].get_attribute('innerHTML').strip()
             temporalElemtn = next(item for item in self.requestData['elements'] if item["description"] == description)
             temporalElemtn['status'] = 'Salida Aprobada'
             confirmedElements.append(temporalElemtn)
-        
+
+
         nextPageButton = driver.find_element_by_css_selector('a#element-table_next')
         if self.utilities.has_class(nextPageButton, 'disabled') == False: # Se puede presionar
             nextPageButton.click()
             return self.confirm_elemants(confirmedElements)
         else:
             return confirmedElements
-
+            
     def approve_request(self, linkTo):
         driver = self.driver
 
@@ -132,8 +127,7 @@ class Interventor(unittest.TestCase):
         else:
             self.assert_request()
 
-        confirmedElements = self.confirm_elemants([])
-        self.requestData["elements"]
+        self.confirm_elemants()
 
         # Presiona el botón "Aprobar Seleccionados"
         try:
@@ -146,101 +140,135 @@ class Interventor(unittest.TestCase):
         modalWindow = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.CSS_SELECTOR, '#approveConfirmation-modal')))
         acceptButton = modalWindow.find_element_by_css_selector('button.btn-success').click()
 
+        print("Solicitud " + self.requestData["requestId"] + " Aprobada con " +str(len(self.requestData['elements']))+ " elementos")
         driver.quit();
         
-        print("Solicitud " + self.requestData["requestId"] + " Aprobada con " +str(len(self.requestData['elements'])) + " elementos")
-        return self.requestData
-
-    def assert_request(self):
+    def assert_terceeros_departure_request(self):
         driver = self.driver
 
         # Busca los datos de la solicitud y hace las comparaciones correspondientes
         plantdd = driver.find_element_by_xpath('//dl[dt/label[contains(text(),"Planta Origen")]]/dd').get_attribute('innerHTML').strip()
         destinydd = driver.find_element_by_xpath('//dl[dt[contains(text(),"Destino")]]/dd').get_attribute('innerHTML').strip()
-        departureReassondd = driver.find_element_by_xpath('//dl[dt[contains(text(),"Motivo de Salida")]]/dd').get_attribute('innerHTML').strip()
-        returnDatedd = driver.find_element_by_xpath('//dl[dt[contains(text(),"Fecha de Retorno")]]/dd').find_element_by_css_selector('input').get_attribute('value').strip()
-        #responsabledd = driver.find_element_by_xpath('//dl[dt[contains(text(),"Responsable")]]/dd').get_attribute('innerHTML').strip()
-
-        assert plantdd == self.requestData['plant']
-        assert destinydd == self.requestData['destiny']
-        assert self.requestData['departureReasson'] == departureReassondd
-        assert self.requestData['returnDate'] == returnDatedd
-        #assert self.requestData['responsable'] == responsabledd 
-        print("Comparados datos de solicitud...")
-
-        # Hace las comparaciones con los elementos resultantes y los elementos guardados al momento de crear la solicitud
-        self.assert_elements()
-
-    def assert_terceeros_departure_request(self):
-        driver = self.driver
-
-        # Busca los datos de la solicitud y hace las comparaciones correspondientes
-        plantdd = driver.find_element_by_xpath('//dl[dt/label[contains(text(),"Planta")]]/dd').get_attribute('innerHTML').strip()
-        returnDatedd = driver.find_element_by_xpath('//dl[dt[contains(text(),"Fecha de Retorno")]]/dd').find_element_by_css_selector('input').get_attribute('value').strip()
-        responsabledd = driver.find_element_by_xpath('//dl[dt[contains(text(),"Responsable")]]/dd').get_attribute('innerHTML').strip()
-        iszonafrancadd = driver.find_element_by_xpath('//p[strong[contains(text(),"¿Son los Elementos propiedad de Zona Franca Argos?")]]').find_elements_by_css_selector('span')[0]
+        ingressReassondd = driver.find_element_by_xpath('//dl[dt[contains(text(),"Motivo de Salida")]]/dd').get_attribute('innerHTML').strip()
+        #returnDatedd = driver.find_element_by_xpath('//dl[dt[contains(text(),"Fecha de Retorno")]]/dd').find_element_by_css_selector('input').get_attribute('value').strip()
+        responsabledd = driver.find_element_by_xpath('//h4[contains(text(), "Responsable")]/strong').get_attribute('innerHTML').strip()
+        interventordd = driver.find_element_by_xpath('//dl[dt/label[contains(text(),"Aprobado por")]]/dd').get_attribute('innerHTML').strip()
+        requestTypedd = driver.find_element_by_xpath('//h3[contains(text(), "Tipo de Solicitud")]/strong').get_attribute('innerHTML').strip()
 
         #assert self.requestData["requestType"] == "Salida Activos de Argos"
         assert plantdd == self.requestData['plant']
-        assert self.requestData['returnDate'] == returnDatedd
+        #assert self.requestData['returnDate'] == returnDatedd
+        assert self.requestData['destiny'] == destinydd
+        assert self.requestData['departureReasson'] == ingressReassondd
         assert self.requestData['responsable'] in responsabledd
-
-        if self.requestData['isZonaFranca'] == True:
-            assert "glyphicon-check" in iszonafrancadd.get_attribute("class")
+        assert self.requestData['interventor'] == interventordd
+        assert self.requestData['interventor'] == interventordd
 
         print("Comparados datos de solicitud...")
 
         # Hace las comparaciones con los elementos resultantes y los elementos guardados al momento de crear la solicitud
-        self.assert_terceeros_departure_request_elements(0)
+        self.assert_terceeros_departure_request_elements(0)        
+
+    def assert_terceeros_departure_request_elements(self, checkedElementsAmount = 0):
+        driver = self.driver
+        elements = self.requestData['elements']
+
+        # Busca los elementos en la tabla de la solicitud creada
+        table = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, "table#element-table")))
+        webElements = table.find_elements_by_css_selector('tbody tr')
+
+        for webElement in webElements:
+            # Busca los datos de cada elemento en la fila
+            webElementCells = webElement.find_elements_by_css_selector('td')
+            webElementDescription = webElementCells[2].get_attribute('innerHTML').strip()
+            webElementCategory = webElementCells[3].get_attribute('innerHTML').strip()
+            webElementAmount = webElementCells[4].get_attribute('innerHTML').strip()
+            webElementSerial = webElementCells[5].get_attribute('innerHTML').strip()
+            webElementStatus = webElementCells[7].get_attribute('innerHTML').strip()
+
+            # Hace las respectivas comparaciones por elemento
+            for element in elements:
+                if element['description'] == webElementDescription:
+                    assert self.requestData['elementCategory'] == webElementCategory
+                    assert str(element['amount']) == webElementAmount
+                    assert element['serial'] == webElementSerial
+
+                    assert element['status'] == webElementStatus
+
+                    checkedElementsAmount += 1 # Para revisar la siguiente página de la tabla y llevar el registro de lo revisado
+                    break
+
+        # Busca el botón para la siguiente pagina
+        nextPageButton = driver.find_element_by_css_selector("a#element-table_next")
+        if self.utilities.has_class(nextPageButton, 'disabled') == False: # Se puede presionar
+            nextPageButton.click()
+            self.assert_terceeros_departure_request_elements(checkedElementsAmount)
+        else: # Ya no hay más paginas disponibles
+            assert checkedElementsAmount == len(elements) # Compara la cantidad de elementos en la tabla con los guardados
+            self.utilities.return_table_to_firstpage(driver, "element-table")
+            print("Comparados datos de elementos...")
 
     def assert_orden_salida(self):
         driver = self.driver
 
         # Busca los datos de la solicitud y hace las comparaciones correspondientes
         plantdd = driver.find_element_by_xpath('//dl[dt/label[contains(text(),"Planta")]]/dd').get_attribute('innerHTML').strip()
-        returnDatedd = driver.find_element_by_xpath('//dl[dt[contains(text(),"Fecha de Retorno")]]/dd').find_element_by_css_selector('input').get_attribute('value').strip()
+        returnDatedd = driver.find_element_by_xpath('//dl[dt[contains(text(),"Fecha de Retorno")]]/dd').get_attribute('innerHTML').strip()
+        destinydd = driver.find_element_by_xpath('//dl[dt[contains(text(),"Destino")]]/dd').get_attribute('innerHTML').strip()
         #responsabledd = driver.find_element_by_xpath('//dl[dt[contains(text(),"Responsable")]]/dd').get_attribute('innerHTML').strip()
         departureReassondd = driver.find_element_by_xpath('//dl[dt[contains(text(),"Motivo de Salida")]]/dd').get_attribute('innerHTML').strip()
-        iszonafrancadd = driver.find_element_by_xpath('//div[strong[contains(text(),"¿Son los Elementos propiedad de Zona Franca Argos?")]]').find_elements_by_css_selector('span')[0]
+        interventordd = driver.find_element_by_xpath('//dl[dt/label[contains(text(),"Aprobado por")]]/dd').get_attribute('innerHTML').strip()
 
         assert self.requestData["requestType"] == "Orden de Salida"
         assert plantdd == self.requestData['plant']
         assert self.requestData['returnDate'] == returnDatedd
+        assert self.requestData['destiny'] == destinydd
         #assert self.requestData['responsable'] in responsabledd
         assert self.requestData['departureReasson'] in departureReassondd
-
-        if self.requestData['isZonaFranca'] == True:
-            assert "glyphicon-check" in iszonafrancadd.get_attribute("class")
+        assert self.requestData['interventor'] == interventordd
 
         print("Comparados datos de solicitud...")
 
         # Hace las comparaciones con los elementos resultantes y los elementos guardados al momento de crear la solicitud
         self.assert_orden_salida_elements(0)
 
-    def assert_transfer_request(self):
+    def assert_orden_salida_elements(self, checkedElementsAmount = 0):
         driver = self.driver
+        elements = self.requestData['elements']
 
-        # Busca los datos de la solicitud y hace las comparaciones correspondientes
-        plantdd = driver.find_element_by_xpath('//dl[dt/label[contains(text(),"Planta Origen")]]/dd').get_attribute('innerHTML').strip()
-        destinyPlantdd = driver.find_element_by_xpath('//dl[dt[contains(text(),"Planta")]]/dd').get_attribute('innerHTML').strip()
-        #responsabledd = driver.find_element_by_xpath('//dl[dt[contains(text(),"Responsable")]]/dd').get_attribute('innerHTML').strip()
-        departureReassondd = driver.find_element_by_xpath('//dl[dt[contains(text(),"Motivo de Salida")]]/dd').get_attribute('innerHTML').strip()
-        iszonafrancadd = driver.find_element_by_xpath('//div[strong[contains(text(),"¿Son los Elementos propiedad de Zona Franca Argos?")]]').find_elements_by_css_selector('span')[0]
-        #self.requestData['destiny'] = 'Destino de prueba'
+        # Busca los elementos en la tabla de la solicitud creada
+        table = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, "table#element-table")))
+        webElements = table.find_elements_by_css_selector('tbody tr')
 
-        assert self.requestData["requestType"] == "Solicitud de Traslado"
-        assert plantdd == self.requestData['plant']
-        assert self.requestData['destinyPlant'] == destinyPlantdd
-        assert self.requestData['departureReasson'] in departureReassondd
-        #assert self.requestData['responsable'] in responsabledd
+        for webElement in webElements:
+            # Busca los datos de cada elemento en la fila
+            webElementCells = webElement.find_elements_by_css_selector('td')
+            webElementDescription = webElementCells[2].get_attribute('innerHTML').strip()
+            webElementCategory = webElementCells[3].get_attribute('innerHTML').strip()
+            webElementAmount = webElementCells[4].get_attribute('innerHTML').strip()
+            webElementSerial = webElementCells[5].get_attribute('innerHTML').strip()
+            webElementStatus = webElementCells[7].get_attribute('innerHTML').strip()
 
-        if self.requestData['isZonaFranca'] == True:
-            assert "glyphicon-check" in iszonafrancadd.get_attribute("class")
+            # Hace las respectivas comparaciones por elemento
+            for element in elements:
+                if element['description'] == webElementDescription:
+                    assert self.requestData['elementCategory'] == webElementCategory
+                    assert int(element['amount']) == int(float(webElementAmount.replace(",", ".")))
+                    assert element['serial'] == webElementSerial
+                    assert element['status'] in webElementStatus
 
-        print("Comparados datos de solicitud...")
+                    checkedElementsAmount += 1 # Para revisar la siguiente página de la tabla y llevar el registro de lo revisado
+                    break
 
-        # Hace las comparaciones con los elementos resultantes y los elementos guardados al momento de crear la solicitud
-        self.assert_transfer_request_elements(0)
+        # Busca el botón para la siguiente pagina
+        nextPageButton = driver.find_element_by_css_selector("a#element-table_next")
+        if self.utilities.has_class(nextPageButton, 'disabled') == False: # Se puede presionar
+            nextPageButton.click()
+            self.assert_orden_salida_elements(checkedElementsAmount)
+        else: # Ya no hay más paginas disponibles
+            assert checkedElementsAmount == len(elements) # Compara la cantidad de elementos en la tabla con los guardados
+            self.utilities.return_table_to_firstpage(driver, "confirm-element-table")
+            print("Comparados datos de elementos...")
 
     def assert_transfer_request_elements(self, checkedElementsAmount = 0):
         driver = self.driver
@@ -255,7 +283,7 @@ class Interventor(unittest.TestCase):
             webElementCells = webElement.find_elements_by_css_selector('td')
             webElementDescription = webElementCells[2].get_attribute('innerHTML').strip()
             webElementCategory = webElementCells[3].get_attribute('innerHTML').strip()
-            webElementAmount = webElementCells[4].find_element_by_css_selector("input").get_attribute('value').strip()
+            webElementAmount = webElementCells[4].get_attribute('innerHTML').strip().replace(",", ".")
             webElementSerial = webElementCells[5].get_attribute('innerHTML').strip()
             webElementStatus = webElementCells[7].get_attribute('innerHTML').strip()
 
@@ -263,7 +291,7 @@ class Interventor(unittest.TestCase):
             for element in elements:
                 if element['description'] == webElementDescription:
                     assert self.requestData['elementCategory'] == webElementCategory
-                    assert str(element['amount']) == webElementAmount
+                    assert int(element['amount']) == int(float(webElementAmount))
                     assert element['serial'] == webElementSerial
                     assert element['status'] in webElementStatus
 
@@ -280,115 +308,27 @@ class Interventor(unittest.TestCase):
             self.utilities.return_table_to_firstpage(driver, "element-table")
             print("Comparados datos de elementos...")
 
-    def assert_terceeros_departure_request_elements(self, checkedElementsAmount = 0):
+    def assert_transfer_request(self):
         driver = self.driver
-        elements = self.requestData['elements']
 
-        # Busca los elementos en la tabla de la solicitud creada
-        table = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, "table#element-table")))
-        webElements = table.find_elements_by_css_selector('tbody tr')
+        # Busca los datos de la solicitud y hace las comparaciones correspondientes
+        plantdd = driver.find_element_by_xpath('//dl[dt/label[contains(text(),"Planta Origen")]]/dd').get_attribute('innerHTML').strip()
+        destinyPlantdd = driver.find_element_by_xpath('//dl[dt[contains(text(),"Planta")]]/dd').get_attribute('innerHTML').strip()
+        responsabledd = driver.find_element_by_xpath('//h4[contains(text(), "Responsable")]//strong').get_attribute('innerHTML').split(".")[1].strip()
+        departureReassondd = driver.find_element_by_xpath('//dl[dt[contains(text(),"Motivo de Salida")]]/dd').get_attribute('innerHTML').strip()
+        #self.requestData['destiny'] = 'Destino de prueba'
+        interventordd = driver.find_element_by_xpath('//dl[dt/label[contains(text(),"Aprobado por")]]/dd').get_attribute('innerHTML').strip()
 
-        for webElement in webElements:
-            # Busca los datos de cada elemento en la fila
-            webElementCells = webElement.find_elements_by_css_selector('td')
-            webElementDescription = webElementCells[2].get_attribute('innerHTML').strip()
-            webElementCategory = webElementCells[3].get_attribute('innerHTML').strip()
-            webElementAmount = webElementCells[4].find_element_by_css_selector("input").get_attribute('value').strip()
-            webElementSerial = webElementCells[5].get_attribute('innerHTML').strip()
-            webElementStatus = webElementCells[7].get_attribute('innerHTML').strip()
+        
+        assert self.requestData['interventor'] == interventordd
+        assert self.requestData["requestType"] == "Solicitud de Traslado"
+        assert plantdd == self.requestData['plant']
+        assert self.requestData['destinyPlant'] == destinyPlantdd
+        assert self.requestData['departureReasson'] in departureReassondd
+        assert self.requestData['responsable'] in responsabledd
 
-            # Hace las respectivas comparaciones por elemento
-            for element in elements:
-                if element['description'] == webElementDescription:
-                    assert self.requestData['elementCategory'] == webElementCategory
-                    assert str(element['amount']) == webElementAmount
-                    assert element['serial'] == webElementSerial
-                    assert element['status'] in webElementStatus
+        print("Comparados datos de solicitud...")
 
-                    checkedElementsAmount += 1 # Para revisar la siguiente página de la tabla y llevar el registro de lo revisado
-                    break
+        # Hace las comparaciones con los elementos resultantes y los elementos guardados al momento de crear la solicitud
+        self.assert_transfer_request_elements(0)
 
-        # Busca el botón para la siguiente pagina
-        nextPageButton = driver.find_element_by_css_selector("a#element-table_next")
-        if self.utilities.has_class(nextPageButton, 'disabled') == False: # Se puede presionar
-            nextPageButton.click()
-            self.assert_terceeros_departure_request_elements(checkedElementsAmount)
-        else: # Ya no hay más paginas disponibles
-            assert checkedElementsAmount == len(elements) # Compara la cantidad de elementos en la tabla con los guardados
-            self.utilities.return_table_to_firstpage(driver, "element-table")
-            print("Comparados datos de elementos...")
-
-    def assert_orden_salida_elements(self, checkedElementsAmount = 0):
-        driver = self.driver
-        elements = self.requestData['elements']
-
-        # Busca los elementos en la tabla de la solicitud creada
-        table = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, "table#element-table")))
-        webElements = table.find_elements_by_css_selector('tbody tr')
-
-        for webElement in webElements:
-            # Busca los datos de cada elemento en la fila
-            webElementCells = webElement.find_elements_by_css_selector('td')
-            webElementDescription = webElementCells[2].get_attribute('innerHTML').strip()
-            webElementCategory = webElementCells[3].get_attribute('innerHTML').strip()
-            webElementAmount = webElementCells[4].find_element_by_css_selector("input").get_attribute('value').strip()
-            webElementSerial = webElementCells[5].get_attribute('innerHTML').strip()
-            webElementStatus = webElementCells[7].get_attribute('innerHTML').strip()
-
-            # Hace las respectivas comparaciones por elemento
-            for element in elements:
-                if element['description'] == webElementDescription:
-                    assert self.requestData['elementCategory'] == webElementCategory
-                    assert str(element['amount']) == webElementAmount
-                    assert element['serial'] == webElementSerial
-                    assert element['status'] in webElementStatus
-
-                    checkedElementsAmount += 1 # Para revisar la siguiente página de la tabla y llevar el registro de lo revisado
-                    break
-
-        # Busca el botón para la siguiente pagina
-        nextPageButton = driver.find_element_by_css_selector("a#element-table_next")
-        if self.utilities.has_class(nextPageButton, 'disabled') == False: # Se puede presionar
-            nextPageButton.click()
-            self.assert_orden_salida_elements(checkedElementsAmount)
-        else: # Ya no hay más paginas disponibles
-            assert checkedElementsAmount == len(elements) # Compara la cantidad de elementos en la tabla con los guardados
-            self.utilities.return_table_to_firstpage(driver, "element-table")
-            print("Comparados datos de elementos...")
-
-    def assert_elements(self, checkedElementsAmount = 0):
-        driver = self.driver
-        elements = self.requestData['elements']
-
-        # Busca los elementos en la tabla de la solicitud creada
-        table = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, "table#element-table")))
-        webElements = table.find_elements_by_css_selector('tbody tr')
-
-        for webElement in webElements:
-            # Busca los datos de cada elemento en la fila
-            webElementCells = webElement.find_elements_by_css_selector('td')
-            webElementDescription = webElementCells[2].get_attribute('innerHTML').strip()
-            webElementCategory = webElementCells[3].get_attribute('innerHTML').strip()
-            webElementAmount = webElementCells[4].find_element_by_css_selector("input").get_attribute('value').strip()
-            webElementSerial = webElementCells[5].get_attribute('innerHTML').strip()
-            webElementStatus = webElementCells[7].get_attribute('innerHTML').strip()
-
-            # Hace las respectivas comparaciones por elemento
-            for element in elements:
-                if element['description'] == webElementDescription:
-                    assert self.requestData['elementCategory'] == webElementCategory
-                    assert str(element['amount']) == webElementAmount
-                    assert element['serial'] == webElementSerial
-                    assert element['status'] in webElementStatus
-
-                    checkedElementsAmount += 1 # Para revisar la siguiente página de la tabla y llevar el registro de lo revisado
-                    break
-
-        # Busca el botón para la siguiente pagina
-        nextPageButton = driver.find_element_by_css_selector("a#element-table_next")
-        if self.utilities.has_class(nextPageButton, 'disabled') == False: # Se puede presionar
-            nextPageButton.click()
-            self.assert_elements(checkedElementsAmount)
-        else: # Ya no hay más paginas disponibles
-            assert checkedElementsAmount == len(elements) # Compara la cantidad de elementos en la tabla con los guardados
-            print("Comparados datos de elementos...")

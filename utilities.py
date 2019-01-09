@@ -38,6 +38,25 @@ class Utilities(unittest.TestCase):
         # El Botón de inicio de sesión
         driver.find_element_by_xpath('//section[@id="loginFormTercero"]/form//input[@type="submit"]').click()
 
+    def localLogin(self, driver, base_url, username, password):
+        #driver = self.driver
+        driver.get(base_url)
+
+        # Espera hasta que se muestre el botón Terceros
+        TercerosButton = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, 'btnUserTercero')))
+        TercerosButton.click()
+
+        emailInput = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, '//input[@id="Email"]')))
+        emailInput.clear()
+        emailInput.send_keys(username)
+        
+        passwordInput = driver.find_element_by_xpath('//input[@id="Password"]')
+        passwordInput.clear()
+        passwordInput.send_keys(password)
+        
+        # El Botón de inicio de sesión
+        driver.find_element_by_xpath('//input[@type="submit"]').click()
+
     def find_request(self, driver, tableCssSelector, requestId, nextButtonCssSelector, columnToSearch):
         driver = driver
         requestId = requestId
@@ -92,7 +111,8 @@ class Utilities(unittest.TestCase):
                 break
 
     def scrollToElement(self, driver, element):
-        driver.execute_script("arguments[0].scrollIntoView();", element)
+        driver.execute_script("window.scrollTo("+ str(element.location['x']) + ", "+ str(element.location['y'] -200) +");")
+        #driver.execute_script("arguments[0].scrollIntoView();", element)
 
     def get_rows(self, driver, tableId, rows = []):
 
@@ -110,7 +130,12 @@ class Utilities(unittest.TestCase):
         return className in element.get_attribute("class")
 
     def return_table_to_firstpage(self, driver, tableId):
-        previousButton = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, "a#"+tableId+"_previous")))
-        if self.has_class(previousButton, 'disabled') == False: # Se puede presionar
-            previousButton.click()
-            self.return_table_to_firstpage(driver, tableId)
+        try:
+            previousButton = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, "a#"+tableId+"_previous")))
+            if self.has_class(previousButton, 'disabled') == False: # Se puede presionar
+                previousButton.click()
+                self.return_table_to_firstpage(driver, tableId)
+        except:
+            a = 1
+
+

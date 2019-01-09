@@ -24,6 +24,9 @@ class Guarda(unittest.TestCase):
         
         self.utilities = utilities.Utilities()
         self.base_url = base_url
+        self.requestData = requestData
+        self.base_url = "http://soporteargos.sdsline.com"
+
 
         if browser == 'crhome' :
             self.driver = webdriver.Chrome('C:\chromedriver\chromedriver.exe')
@@ -33,10 +36,19 @@ class Guarda(unittest.TestCase):
             self.driver = webdriver.Ie('C:\IEDriverServer\IEDriverServer.exe')
         
         self.driver.maximize_window()
-        self.username = "guardacanteraeltriunfo@argos.com"
-        self.password = "guardacanteraeltriunfo@argos.com"
 
-        self.requestData = requestData
+        if requestData["isZonaFranca"]:
+            self.password = "guardacartagenazf@argos.com"
+            self.username = "guardacartagenazf@argos.com"
+        else:
+            self.username = "guardacanteraeltriunfo@argos.com"
+            self.password = "guardacanteraeltriunfo@argos.com"
+
+        # los traslados van para almagran
+        if self.requestData['requestType'] == "Entrada de Elementos Trasladados":
+            self.username = "guardaalmagran@argos.com"
+            self.password = "guardaalmagran@argos.com"
+
 
         print("********************* Guarda ************************************")
         #time.sleep(5)
@@ -106,6 +118,7 @@ class Guarda(unittest.TestCase):
                 # Presiona el botón confirmar para el elemento
                 #confirmElementButton = row.find_element_by_css_selector('button.confirm-button')
                 confirmElementButton = WebDriverWait(row, 10).until(EC.element_to_be_clickable((By.CSS_SELECTOR, 'button.confirm-button')))
+                self.utilities.scrollToElement(driver, confirmElementButton)
                 confirmElementButton.click()
 
                 # Agrega el elemento confirmado
@@ -117,16 +130,59 @@ class Guarda(unittest.TestCase):
             return self.confirm_elemants(confirmedElements)
         else:
             return confirmedElements
+    
+    def confirm_all_elemants(self, confirmedElements = []):
+        driver = self.driver
+
+        # encuentra las filas de la tabla
+        table = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, 'table#confirm-element-table')))
+        elements  = table.find_elements_by_css_selector('tbody tr')
+            
+        for row in elements:
+            columns = row.find_elements_by_css_selector('td')
+            
+            # Arma unas observaciones con la descripción y la cntidad
+            description = columns[2].get_attribute('innerHTML').strip()
+            amount = columns[3].get_attribute('innerHTML').strip()
+            observations = 'Confirmando ' + description + ' - Cantidad: ' + amount                
+
+            # Agrega las observaciones
+            observationsInput = row.find_element_by_css_selector('textarea.guardObservations')
+            observationsInput.clear()
+            observationsInput.send_keys(observations)
+
+            # Presiona el botón confirmar para el elemento
+            #confirmElementButton = row.find_element_by_css_selector('button.confirm-button')
+            confirmElementButton = WebDriverWait(row, 10).until(EC.element_to_be_clickable((By.CSS_SELECTOR, 'button.confirm-button')))
+            self.utilities.scrollToElement(driver, confirmElementButton)
+            confirmElementButton.click()
+
+            # Agrega el elemento confirmado
+            confirmedElements.append(next(item for item in self.requestData['elements'] if item["description"] == description))
+
+        nextPageButton = driver.find_element_by_css_selector('a#confirm-element-table_next')
+        if self.utilities.has_class(nextPageButton, 'disabled') == False: # Se puede presionar
+            nextPageButton.click()
+            return self.confirm_all_elemants(confirmedElements)
+        else:
+            return confirmedElements
             
     def approve_request(self, linkTo):
         driver = self.driver
 
-        self.utilities.login(self.driver, self.base_url, self.username, self.password)
+        self.utilities.localLogin(self.driver, self.base_url, self.username, self.password)
         self.link_to_pending_requests(linkTo)
         self.find_request()
 
         # Hace las comparaciones necesarias
-        self.assert_request()
+        if self.requestData['requestType'] == "Salida Activos de Argos":
+            self.assert_terceeros_departure_request()
+        elif self.requestData['requestType'] == "Solicitud de Traslado":
+            self.assert_transfer_request()
+        elif self.requestData['requestType'] == "Entrada de Elementos Trasladados":
+            self.assert_transfer_request()
+        else:
+            self.assert_request()
 
         # Confirma los elementos
         confirmedElements = self.confirm_elemants()
@@ -148,6 +204,47 @@ class Guarda(unittest.TestCase):
 
         return self.requestData
 
+    def approve_argos_request(self, linkTo):
+        driver = self.driver
+
+        self.utilities.localLogin(self.driver, self.base_url, self.username, self.password)
+        self.link_to_pending_requests(linkTo)
+        self.find_request()
+
+        # Hace las comparaciones necesarias
+        if self.requestData['requestType'] == "Salida Activos de Argos":
+            self.assert_terceeros_departure_request()
+        elif self.requestData['requestType'] == "Orden de Salida":
+            self.assert_orden_salida()
+            self.requestData["requestType"] = "Retorno de Elementos"
+        elif self.requestData['requestType'] == "Solicitud de Traslado":
+            self.assert_transfer_request()
+            self.requestData["requestType"] = "Entrada de Elementos Trasladados"
+        elif self.requestData['requestType'] == "Entrada de Elementos Trasladados":
+            self.assert_transfer_request()
+        elif self.requestData['requestType'] == "Retorno de Elementos":
+            self.assert_orden_salida()
+        else:
+            self.assert_request()
+
+        # Confirma los elementos
+        confirmedElements = self.confirm_all_elemants([])
+    
+        # confirma la solicitud
+        confirmRequestButton = driver.find_element_by_css_selector('button#request-confirm-button')
+        confirmRequestButton.click()
+
+        print("Solicitud " +self.requestData['requestId']+ " confirmada con " +str(len(confirmedElements))+ " elementos confirmados")
+        if len(confirmedElements) < len(self.requestData['elements']):# La contidad de elementos confirmados es menor a la cantidad real de elementos
+            # Hace clic en el botón confirma de la ventana emergente p
+            WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, 'button#confirm-ingress-modal-button'))).click()
+
+        # Actualiza los elementos de la solicitud con lo que fueron confirmados
+        self.requestData['elements'] = confirmedElements
+
+        driver.quit();
+
+        return self.requestData
 
     def approve_departure_request(self, linkTo):
         driver = self.driver
@@ -157,7 +254,10 @@ class Guarda(unittest.TestCase):
         self.find_request()
 
         # Hace las comparaciones necesarias
-        self.assert_request()
+        if self.requestData['requestType'] == "Salida Activos de Argos":
+            self.assert_terceeros_departure_request()
+        else:
+            self.assert_request()
 
         # Confirma los elementos
         confirmedElements = self.confirm_elemants([])
@@ -179,18 +279,48 @@ class Guarda(unittest.TestCase):
 
         return self.requestData
 
-    def assert_request(self):
+    def assert_terceeros_departure_request(self):
         driver = self.driver
         self.utilities = utilities.Utilities()
 
         # Busca los datos de la solicitud y hace las comparaciones correspondientes
         responsabledd = driver.find_element_by_xpath('//h4[contains(text(), "Responsable")]').get_attribute('innerHTML').strip()
 
-        assert self.requestData['trabajador'] in responsabledd
+        assert self.requestData['responsable'] in responsabledd
+
+        print("Comparados datos de solicitud")
+        
+        # Hace las comparaciones con los elementos resultantes y los elementos guardados al momento de crear la solicitud
+        self.assert_elements()
+
+    def assert_orden_salida(self):
+        driver = self.driver
+        self.utilities = utilities.Utilities()
+
+        # Busca los datos de la solicitud y hace las comparaciones correspondientes
+        #responsabledd = driver.find_element_by_xpath('//h4[contains(text(), "Responsable")]').get_attribute('innerHTML').strip()
+        responsabledd = driver.find_element_by_xpath('//dl[dt[contains(text(),"Responsable")]]/dd').get_attribute('innerHTML').strip()
+
+        assert self.requestData['responsable'] in responsabledd
 
         print("Comparados datos de solicitud")
         # Hace las comparaciones con los elementos resultantes y los elementos guardados al momento de crear la solicitud
         self.assert_elements()
+
+    def assert_transfer_request(self):
+        driver = self.driver
+        self.utilities = utilities.Utilities()
+
+        # Busca los datos de la solicitud y hace las comparaciones correspondientes
+        responsabledd = driver.find_element_by_xpath('//dl[dt[contains(text(),"Responsable")]]/dd').get_attribute('innerHTML').strip()
+
+        assert self.requestData['responsable'] in responsabledd
+
+        print("Comparados datos de solicitud")
+        # Hace las comparaciones con los elementos resultantes y los elementos guardados al momento de crear la solicitud
+        self.assert_elements()
+
+
 
     def assert_elements(self, checkedElementsAmount = 0):
         driver = self.driver

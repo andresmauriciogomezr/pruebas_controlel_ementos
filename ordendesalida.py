@@ -15,6 +15,7 @@ import guarda
 import tercero
 import interventor
 import usuarioargos
+import usuariooperador
 
 
 import random
@@ -40,11 +41,15 @@ class EntradaSalidaElementos(unittest.TestCase):
         inverventorDriver = interventor.Interventor(self.base_url, self.browser, requestData)
         inverventorDriver.approve_request('Solicitudes Argos')
 
-        guardaDriver = guarda.Guarda(self.base_url, self.browser, requestData)
-        guardaDriver.approve_request('Solicitudes Argos')
+        if requestData["isZonaFranca"] == 1:
+            usuarioOperador = usuariooperador.UsuarioOperador(self.base_url, self.browser, requestData)
+            usuarioOperador.approve_request('Solicitudes Pendientes')
 
         guardaDriver = guarda.Guarda(self.base_url, self.browser, requestData)
-        guardaDriver.approve_request('Solicitudes Argos')
+        requestData = guardaDriver.approve_argos_request('Solicitudes Argos')
+
+        guardaDriver = guarda.Guarda(self.base_url, self.browser, requestData)
+        guardaDriver.approve_argos_request('Solicitudes Argos')
 
         time.sleep(5)
 
